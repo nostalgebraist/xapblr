@@ -34,11 +34,16 @@ def index_link(block, tg):
     url_prefix = "https://href.li/?"
     url = block["url"].removeprefix(url_prefix)
     domain = urlparse(url).hostname
+    domain_list = [domain]
     while True:
+        if domain is None:
+            print(f"domain is None\nblock {block}\nurl {url}, domain_list {domain_list}")
+            break
         doc.add_term(prefixes["link"] + domain)
         try:
             sep = domain.index(".")
             domain = domain[sep + 1 :]
+            domain_list.append(domain)
         except ValueError:
             break
     tg.index_text(block["description"])
@@ -169,8 +174,12 @@ def index(args):
         n += len(posts)
 
         for p in posts:
-            (id_term, post_doc) = index_post(p, tg)
-            db.replace_document(id_term, post_doc)
+            try:
+                (id_term, post_doc) = index_post(p, tg)
+                db.replace_document(id_term, post_doc)
+            except Exception as e:
+                print(f"failed on {p['id']}")
+                raise e
             kwargs["before"] = p["timestamp"]
 
         if pages % commit_every == 0:
